@@ -67,4 +67,8 @@ class DiningTableRepository {
 
     return DiningTable.fromJson(response.data['data']);
   }
+
+  Future<void> openSession(String tableId) async {
+    await ApiClient.dio.post('/tables/$tableId/open-session');
+  }
 }

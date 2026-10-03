@@ -9,6 +9,8 @@ import '../model/customer_menu.dart';
 import '../model/customer_table_info.dart';
 import 'customer_order_status_page.dart';
 
+import 'dart:async';
+
 class CustomerOrderPage extends StatefulWidget {
   final String tableToken;
 
@@ -33,6 +35,12 @@ class _CustomerOrderPageState extends State<CustomerOrderPage> {
 
   bool loading = true;
 
+  bool canOrder = false;
+
+  String? sessionStatus;
+
+  Timer? orderingStatusTimer;
+
   String? error;
 
   @override
@@ -40,6 +48,35 @@ class _CustomerOrderPageState extends State<CustomerOrderPage> {
     super.initState();
 
     _load();
+
+    orderingStatusTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+      _refreshOrderingStatus();
+    });
+  }
+
+  @override
+  void dispose() {
+    orderingStatusTimer?.cancel();
+
+    super.dispose();
+  }
+
+  Future<void> _refreshOrderingStatus() async {
+    try {
+      final status = await repository.getOrderingStatus(widget.tableToken);
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        canOrder = status.canOrder;
+
+        sessionStatus = status.sessionStatus;
+      });
+    } catch (_) {
+      // ไม่ต้องเด้ง error ทุก 10 วินาที
+    }
   }
 
   Future<void> _load() async {
@@ -53,6 +90,10 @@ class _CustomerOrderPageState extends State<CustomerOrderPage> {
 
       final menu = await repository.getMenu(widget.tableToken);
 
+      final orderingStatus = await repository.getOrderingStatus(
+        widget.tableToken,
+      );
+
       if (!mounted) {
         return;
       }
@@ -60,6 +101,8 @@ class _CustomerOrderPageState extends State<CustomerOrderPage> {
       setState(() {
         tableInfo = table;
         categories = menu;
+        canOrder = orderingStatus.canOrder;
+        sessionStatus = orderingStatus.sessionStatus;
         loading = false;
       });
     } catch (e) {
@@ -132,6 +175,8 @@ class _CustomerOrderPageState extends State<CustomerOrderPage> {
         child: Column(
           children: [
             _buildHeader(),
+
+            _buildOrderingStatusBanner(),
 
             _buildSearch(),
 
@@ -224,6 +269,72 @@ class _CustomerOrderPageState extends State<CustomerOrderPage> {
             },
 
             icon: const Icon(Icons.receipt_long),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOrderingStatusBanner() {
+    if (canOrder) {
+      return Container(
+        width: double.infinity,
+
+        margin: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+
+        padding: const EdgeInsets.all(12),
+
+        decoration: BoxDecoration(
+          color: Colors.green.shade50,
+
+          borderRadius: BorderRadius.circular(10),
+        ),
+
+        child: const Row(
+          children: [
+            Icon(Icons.check_circle_outline),
+
+            SizedBox(width: 8),
+
+            Expanded(child: Text('โต๊ะเปิดแล้ว สามารถสั่งอาหารได้')),
+          ],
+        ),
+      );
+    }
+
+    String message = 'โต๊ะนี้ยังไม่ได้เปิดให้สั่งอาหาร กรุณาติดต่อพนักงาน';
+
+    if (sessionStatus == 'CHECKOUT_REQUESTED') {
+      message = 'โต๊ะนี้กำลังเช็กบิล ไม่สามารถสั่งอาหารเพิ่มได้';
+    }
+
+    return Container(
+      width: double.infinity,
+
+      margin: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+
+      padding: const EdgeInsets.all(12),
+
+      decoration: BoxDecoration(
+        color: Colors.orange.shade50,
+
+        borderRadius: BorderRadius.circular(10),
+      ),
+
+      child: Row(
+        children: [
+          const Icon(Icons.info_outline),
+
+          const SizedBox(width: 8),
+
+          Expanded(child: Text(message)),
+
+          IconButton(
+            tooltip: 'ตรวจสอบอีกครั้ง',
+
+            onPressed: _refreshOrderingStatus,
+
+            icon: const Icon(Icons.refresh),
           ),
         ],
       ),
@@ -407,11 +518,13 @@ class _CustomerOrderPageState extends State<CustomerOrderPage> {
                       width: double.infinity,
 
                       child: FilledButton(
-                        onPressed: () {
-                          _addItem(item);
-                        },
+                        onPressed: canOrder
+                            ? () {
+                                _addItem(item);
+                              }
+                            : null,
 
-                        child: const Text('เพิ่ม'),
+                        child: Text(canOrder ? 'เพิ่ม' : 'ยังไม่เปิดโต๊ะ'),
                       ),
                     )
                   else
@@ -436,9 +549,11 @@ class _CustomerOrderPageState extends State<CustomerOrderPage> {
                         ),
 
                         IconButton(
-                          onPressed: () {
-                            _addItem(item);
-                          },
+                          onPressed: canOrder
+                              ? () {
+                                  _addItem(item);
+                                }
+                              : null,
 
                           icon: const Icon(Icons.add),
                         ),
@@ -814,6 +929,18 @@ class _CustomerOrderPageState extends State<CustomerOrderPage> {
   }
 
   Future<bool> _submitOrder(String customerNote) async {
+    if (!canOrder) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('ไม่สามารถสั่งอาหารได้ โต๊ะไม่ได้เปิดให้สั่งแล้ว'),
+          ),
+        );
+      }
+
+      return false;
+    }
+
     try {
       final items = cart.values
           .map(
@@ -879,6 +1006,10 @@ class _CustomerOrderPageState extends State<CustomerOrderPage> {
 
       return true;
     } catch (error) {
+      if (error is DioException && error.response?.statusCode == 409) {
+        await _refreshOrderingStatus();
+      }
+
       if (!mounted) {
         return false;
       }

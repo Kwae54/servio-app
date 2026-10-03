@@ -323,39 +323,60 @@ class _TableCard extends ConsumerWidget {
 
             const Spacer(),
 
-            Row(
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+
               children: [
-                _StatusBadge(status: table.status),
+                Row(
+                  children: [
+                    _StatusBadge(status: table.status),
 
-                const Spacer(),
+                    const Spacer(),
 
-                if (!table.isOccupied)
-                  Switch(
-                    value: table.isAvailable,
+                    if (!table.isOccupied)
+                      Switch(
+                        value: table.isAvailable,
 
-                    onChanged: (active) async {
-                      try {
-                        final repository = ref.read(
-                          diningTableRepositoryProvider,
-                        );
+                        onChanged: (active) async {
+                          try {
+                            final repository = ref.read(
+                              diningTableRepositoryProvider,
+                            );
 
-                        await repository.updateStatus(
-                          tableId: table.id,
-                          status: active ? 'AVAILABLE' : 'INACTIVE',
-                        );
+                            await repository.updateStatus(
+                              tableId: table.id,
 
-                        ref.invalidate(diningTablesProvider(restaurantId));
-                      } catch (error) {
-                        if (!context.mounted) {
-                          return;
-                        }
+                              status: active ? 'AVAILABLE' : 'INACTIVE',
+                            );
 
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(_getErrorMessage(error))),
-                        );
-                      }
+                            ref.invalidate(diningTablesProvider(restaurantId));
+                          } catch (error) {
+                            if (!context.mounted) {
+                              return;
+                            }
+
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(_getErrorMessage(error))),
+                            );
+                          }
+                        },
+                      ),
+                  ],
+                ),
+
+                if (table.isAvailable) ...[
+                  const SizedBox(height: 12),
+
+                  FilledButton.icon(
+                    onPressed: () {
+                      _openTable(context, ref);
                     },
+
+                    icon: const Icon(Icons.play_arrow),
+
+                    label: const Text('เปิดโต๊ะ'),
                   ),
+                ],
               ],
             ),
 
@@ -371,6 +392,65 @@ class _TableCard extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _openTable(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text('เปิดโต๊ะ ${table.tableNo}'),
+
+          content: const Text('ยืนยันว่ามีลูกค้าเข้ามาใช้โต๊ะนี้แล้วหรือไม่?'),
+
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext, false);
+              },
+
+              child: const Text('ยกเลิก'),
+            ),
+
+            FilledButton(
+              onPressed: () {
+                Navigator.pop(dialogContext, true);
+              },
+
+              child: const Text('เปิดโต๊ะ'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true) {
+      return;
+    }
+
+    try {
+      final repository = ref.read(diningTableRepositoryProvider);
+
+      await repository.openSession(table.id);
+
+      ref.invalidate(diningTablesProvider(restaurantId));
+
+      if (!context.mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('เปิดโต๊ะ ${table.tableNo} เรียบร้อย')),
+      );
+    } catch (error) {
+      if (!context.mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(_getErrorMessage(error))));
+    }
   }
 
   Future<void> _showEditDialog(BuildContext context, WidgetRef ref) async {

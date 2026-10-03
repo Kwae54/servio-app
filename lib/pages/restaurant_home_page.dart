@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../features/auth/presentation/auth_provider.dart';
+import '../core/config/app_config.dart';
 
 import 'restaurant_dashboard_page.dart';
 
@@ -46,7 +47,10 @@ class RestaurantHomePage extends ConsumerWidget {
             ...?auth?.restaurants.map((restaurant) {
               return Card(
                 child: ListTile(
-                  leading: const Icon(Icons.storefront),
+                  leading: _RestaurantLogo(
+                    imageUrl: restaurant.imageUrl,
+                    size: 52,
+                  ),
 
                   title: Text(restaurant.name),
 
@@ -69,6 +73,43 @@ class RestaurantHomePage extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _RestaurantLogo extends StatelessWidget {
+  final String? imageUrl;
+  final double size;
+
+  const _RestaurantLogo({required this.imageUrl, this.size = 52});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: size,
+      height: size,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: imageUrl != null && imageUrl!.isNotEmpty
+            ? Image.network(
+                AppConfig.imageUrl(imageUrl),
+                width: size,
+                height: size,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return _placeholder();
+                },
+              )
+            : _placeholder(),
+      ),
+    );
+  }
+
+  Widget _placeholder() {
+    return Container(
+      alignment: Alignment.center,
+      color: Colors.grey.shade100,
+      child: Icon(Icons.storefront, size: size * 0.55),
     );
   }
 }

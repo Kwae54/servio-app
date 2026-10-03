@@ -5,6 +5,7 @@ import '../features/dining_table/presentation/dining_table_page.dart';
 import '../features/menu/presentation/menu_management_page.dart';
 import '../features/order/presentation/order_management_page.dart';
 import '../features/billing/presentation/billing_management_page.dart';
+import '../core/config/app_config.dart';
 
 class RestaurantDashboardPage extends StatelessWidget {
   final AuthRestaurant restaurant;
@@ -23,18 +24,19 @@ class RestaurantDashboardPage extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
 
           children: [
-            Text(
-              'Restaurant Dashboard',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
+            _RestaurantHeader(restaurant: restaurant),
 
-            const SizedBox(height: 8),
+            // Text(
+            //   'Restaurant Dashboard',
+            //   style: Theme.of(context).textTheme.headlineMedium,
+            // ),
 
-            Text(
-              restaurant.name,
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
+            // const SizedBox(height: 8),
 
+            // Text(
+            //   restaurant.name,
+            //   style: Theme.of(context).textTheme.titleLarge,
+            // ),
             const SizedBox(height: 32),
 
             LayoutBuilder(
@@ -194,6 +196,97 @@ class _DashboardCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _RestaurantHeader extends StatelessWidget {
+  final AuthRestaurant restaurant;
+
+  const _RestaurantHeader({required this.restaurant});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+
+      padding: const EdgeInsets.all(20),
+
+      decoration: BoxDecoration(
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+
+        borderRadius: BorderRadius.circular(16),
+      ),
+
+      child: Row(
+        children: [
+          SizedBox(
+            width: 88,
+            height: 88,
+
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+
+              child:
+                  restaurant.imageUrl != null && restaurant.imageUrl!.isNotEmpty
+                  ? Image.network(
+                      AppConfig.imageUrl(restaurant.imageUrl),
+
+                      fit: BoxFit.cover,
+
+                      errorBuilder: (context, error, stackTrace) {
+                        return _logoPlaceholder();
+                      },
+                    )
+                  : _logoPlaceholder(),
+            ),
+          ),
+
+          const SizedBox(width: 20),
+
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+
+              children: [
+                Text(
+                  restaurant.name,
+
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+
+                const SizedBox(height: 6),
+
+                Row(
+                  children: [
+                    const Icon(Icons.circle, size: 10),
+
+                    const SizedBox(width: 6),
+
+                    Text(restaurant.status),
+                  ],
+                ),
+
+                const SizedBox(height: 6),
+
+                Text(
+                  'Restaurant Dashboard',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _logoPlaceholder() {
+    return Container(
+      color: Colors.grey.shade100,
+      alignment: Alignment.center,
+
+      child: const Icon(Icons.storefront, size: 44),
     );
   }
 }

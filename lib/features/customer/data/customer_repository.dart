@@ -2,6 +2,7 @@ import '../../../core/network/api_client.dart';
 
 import '../model/customer_menu.dart';
 import '../model/customer_table_info.dart';
+import '../model/customer_ordering_status.dart';
 import '../../order/model/restaurant_order.dart';
 
 class CustomerRepository {
@@ -64,5 +65,15 @@ class CustomerRepository {
     return data
         .map((json) => RestaurantOrder.fromJson(json as Map<String, dynamic>))
         .toList();
+  }
+
+  Future<CustomerOrderingStatus> getOrderingStatus(String tableToken) async {
+    final response = await ApiClient.dio.get(
+      '/public/ordering-status',
+
+      queryParameters: {'tableToken': tableToken},
+    );
+
+    return CustomerOrderingStatus.fromJson(response.data['data']);
   }
 }
