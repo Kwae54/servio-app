@@ -68,7 +68,19 @@ class DiningTableRepository {
     return DiningTable.fromJson(response.data['data']);
   }
 
-  Future<void> openSession(String tableId) async {
-    await ApiClient.dio.post('/tables/$tableId/open-session');
+  Future<Map<String, dynamic>> openSession(String tableId) async {
+    final response = await ApiClient.dio.post('/tables/$tableId/open-session');
+
+    return Map<String, dynamic>.from(response.data['data']);
+  }
+
+  Future<void> moveSession({
+    required String sourceTableId,
+    required String targetTableId,
+  }) async {
+    await ApiClient.dio.post(
+      '/tables/$sourceTableId/move-session',
+      data: {'targetTableId': targetTableId},
+    );
   }
 }

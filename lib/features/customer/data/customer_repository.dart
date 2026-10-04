@@ -2,25 +2,22 @@ import '../../../core/network/api_client.dart';
 
 import '../model/customer_menu.dart';
 import '../model/customer_table_info.dart';
-import '../model/customer_ordering_status.dart';
 import '../../order/model/restaurant_order.dart';
 
 class CustomerRepository {
-  Future<CustomerTableInfo> getTableInfo(String tableToken) async {
+  Future<CustomerTableInfo> getSessionInfo(String sessionToken) async {
     final response = await ApiClient.dio.get(
-      '/public/table',
-
-      queryParameters: {'tableToken': tableToken},
+      '/public/session',
+      queryParameters: {'sessionToken': sessionToken},
     );
 
     return CustomerTableInfo.fromJson(response.data['data']);
   }
 
-  Future<List<CustomerMenuCategory>> getMenu(String tableToken) async {
+  Future<List<CustomerMenuCategory>> getMenu(String sessionToken) async {
     final response = await ApiClient.dio.get(
       '/public/menu',
-
-      queryParameters: {'tableToken': tableToken},
+      queryParameters: {'sessionToken': sessionToken},
     );
 
     final List data = response.data['data']['categories'] ?? [];
@@ -34,18 +31,15 @@ class CustomerRepository {
   }
 
   Future<Map<String, dynamic>> createOrder({
-    required String tableToken,
+    required String sessionToken,
     required String customerNote,
     required List<Map<String, dynamic>> items,
   }) async {
     final response = await ApiClient.dio.post(
       '/public/orders',
-
       data: {
-        'tableToken': tableToken,
-
+        'sessionToken': sessionToken,
         'customerNote': customerNote,
-
         'items': items,
       },
     );
@@ -53,11 +47,10 @@ class CustomerRepository {
     return Map<String, dynamic>.from(response.data['data']);
   }
 
-  Future<List<RestaurantOrder>> getOrders(String tableToken) async {
+  Future<List<RestaurantOrder>> getOrders(String sessionToken) async {
     final response = await ApiClient.dio.get(
       '/public/orders',
-
-      queryParameters: {'tableToken': tableToken},
+      queryParameters: {'sessionToken': sessionToken},
     );
 
     final List data = response.data['data'] ?? [];
@@ -67,13 +60,12 @@ class CustomerRepository {
         .toList();
   }
 
-  Future<CustomerOrderingStatus> getOrderingStatus(String tableToken) async {
+  Future<Map<String, dynamic>> getOrderingStatus(String sessionToken) async {
     final response = await ApiClient.dio.get(
       '/public/ordering-status',
-
-      queryParameters: {'tableToken': tableToken},
+      queryParameters: {'sessionToken': sessionToken},
     );
 
-    return CustomerOrderingStatus.fromJson(response.data['data']);
+    return Map<String, dynamic>.from(response.data['data']);
   }
 }

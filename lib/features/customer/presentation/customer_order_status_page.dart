@@ -7,9 +7,9 @@ import '../../order/model/restaurant_order.dart';
 import '../data/customer_repository.dart';
 
 class CustomerOrderStatusPage extends StatefulWidget {
-  final String tableToken;
+  final String sessionToken;
 
-  const CustomerOrderStatusPage({super.key, required this.tableToken});
+  const CustomerOrderStatusPage({super.key, required this.sessionToken});
 
   @override
   State<CustomerOrderStatusPage> createState() =>
@@ -54,7 +54,7 @@ class _CustomerOrderStatusPageState extends State<CustomerOrderStatusPage> {
     }
 
     try {
-      final result = await repository.getOrders(widget.tableToken);
+      final result = await repository.getOrders(widget.sessionToken);
 
       if (!mounted) {
         return;

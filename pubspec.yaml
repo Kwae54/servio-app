@@ -39,6 +39,8 @@ dependencies:
   flutter_secure_storage: ^11.2.0
   image_picker: ^1.2.3
   qr_flutter: ^4.1.0
+  pdf: ^3.13.1
+  printing: ^5.15.1
 
 dev_dependencies:
   flutter_test:

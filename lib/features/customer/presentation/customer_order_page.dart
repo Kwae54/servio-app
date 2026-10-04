@@ -12,9 +12,9 @@ import 'customer_order_status_page.dart';
 import 'dart:async';
 
 class CustomerOrderPage extends StatefulWidget {
-  final String tableToken;
+  final String sessionToken;
 
-  const CustomerOrderPage({super.key, required this.tableToken});
+  const CustomerOrderPage({super.key, required this.sessionToken});
 
   @override
   State<CustomerOrderPage> createState() => _CustomerOrderPageState();
@@ -63,16 +63,15 @@ class _CustomerOrderPageState extends State<CustomerOrderPage> {
 
   Future<void> _refreshOrderingStatus() async {
     try {
-      final status = await repository.getOrderingStatus(widget.tableToken);
+      final status = await repository.getOrderingStatus(widget.sessionToken);
 
       if (!mounted) {
         return;
       }
 
       setState(() {
-        canOrder = status.canOrder;
-
-        sessionStatus = status.sessionStatus;
+        canOrder = status['canOrder'] == true;
+        sessionStatus = status['sessionStatus']?.toString();
       });
     } catch (_) {
       // ไม่ต้องเด้ง error ทุก 10 วินาที
@@ -86,12 +85,12 @@ class _CustomerOrderPageState extends State<CustomerOrderPage> {
     });
 
     try {
-      final table = await repository.getTableInfo(widget.tableToken);
+      final table = await repository.getSessionInfo(widget.sessionToken);
 
-      final menu = await repository.getMenu(widget.tableToken);
+      final menu = await repository.getMenu(widget.sessionToken);
 
       final orderingStatus = await repository.getOrderingStatus(
-        widget.tableToken,
+        widget.sessionToken,
       );
 
       if (!mounted) {
@@ -101,8 +100,8 @@ class _CustomerOrderPageState extends State<CustomerOrderPage> {
       setState(() {
         tableInfo = table;
         categories = menu;
-        canOrder = orderingStatus.canOrder;
-        sessionStatus = orderingStatus.sessionStatus;
+        canOrder = orderingStatus['canOrder'] == true;
+        sessionStatus = orderingStatus['sessionStatus']?.toString();
         loading = false;
       });
     } catch (e) {
@@ -262,8 +261,9 @@ class _CustomerOrderPageState extends State<CustomerOrderPage> {
                 context,
 
                 MaterialPageRoute(
-                  builder: (_) =>
-                      CustomerOrderStatusPage(tableToken: widget.tableToken),
+                  builder: (_) => CustomerOrderStatusPage(
+                    sessionToken: widget.sessionToken,
+                  ),
                 ),
               );
             },
@@ -955,7 +955,7 @@ class _CustomerOrderPageState extends State<CustomerOrderPage> {
           .toList();
 
       final result = await repository.createOrder(
-        tableToken: widget.tableToken,
+        sessionToken: widget.sessionToken,
 
         customerNote: customerNote.trim(),
 

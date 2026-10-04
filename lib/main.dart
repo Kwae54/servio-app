@@ -26,10 +26,10 @@ class ServioApp extends StatelessWidget {
 }
 
 Widget _buildHome() {
-  final tableToken = Uri.base.queryParameters['tableToken'];
+  final sessionToken = Uri.base.queryParameters['sessionToken'];
 
-  if (tableToken != null && tableToken.trim().isNotEmpty) {
-    return CustomerOrderPage(tableToken: tableToken.trim());
+  if (sessionToken != null && sessionToken.isNotEmpty) {
+    return CustomerOrderPage(sessionToken: sessionToken);
   }
 
   return const AuthGate();

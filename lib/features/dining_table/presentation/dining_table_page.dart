@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../model/dining_table.dart';
 import 'dining_table_provider.dart';
-import '../../table_qr/presentation/table_qr_page.dart';
+import '../../session_qr/presentation/session_qr_page.dart';
 
 class DiningTablePage extends ConsumerWidget {
   final String restaurantId;
@@ -65,7 +65,7 @@ class DiningTablePage extends ConsumerWidget {
                     gridDelegate:
                         const SliverGridDelegateWithMaxCrossAxisExtent(
                           maxCrossAxisExtent: 300,
-                          mainAxisExtent: 210,
+                          mainAxisExtent: 240,
                           crossAxisSpacing: 16,
                           mainAxisSpacing: 16,
                         ),
@@ -76,6 +76,7 @@ class DiningTablePage extends ConsumerWidget {
                       return _TableCard(
                         table: tables[index],
                         restaurantId: restaurantId,
+                        allTables: tables,
                       );
                     },
                   );
@@ -92,6 +93,7 @@ class DiningTablePage extends ConsumerWidget {
                     return _TableCard(
                       table: tables[index],
                       restaurantId: restaurantId,
+                      allTables: tables,
                     );
                   },
                 );
@@ -232,8 +234,13 @@ class DiningTablePage extends ConsumerWidget {
 class _TableCard extends ConsumerWidget {
   final DiningTable table;
   final String restaurantId;
+  final List<DiningTable> allTables;
 
-  const _TableCard({required this.table, required this.restaurantId});
+  const _TableCard({
+    required this.table,
+    required this.restaurantId,
+    required this.allTables,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -273,19 +280,6 @@ class _TableCard extends ConsumerWidget {
                     if (value == 'edit') {
                       _showEditDialog(context, ref);
                     }
-
-                    if (value == 'qr') {
-                      Navigator.push(
-                        context,
-
-                        MaterialPageRoute(
-                          builder: (_) => TableQRPage(
-                            tableId: table.id,
-                            tableNo: table.tableNo,
-                          ),
-                        ),
-                      );
-                    }
                   },
 
                   itemBuilder: (context) => const [
@@ -299,20 +293,6 @@ class _TableCard extends ConsumerWidget {
                           SizedBox(width: 8),
 
                           Text('แก้ไขโต๊ะ'),
-                        ],
-                      ),
-                    ),
-
-                    PopupMenuItem(
-                      value: 'qr',
-
-                      child: Row(
-                        children: [
-                          Icon(Icons.qr_code),
-
-                          SizedBox(width: 8),
-
-                          Text('QR โต๊ะ'),
                         ],
                       ),
                     ),
@@ -380,18 +360,221 @@ class _TableCard extends ConsumerWidget {
               ],
             ),
 
-            if (table.isOccupied)
-              const Padding(
-                padding: EdgeInsets.only(top: 8),
-                child: Text(
-                  'โต๊ะกำลังใช้งาน ไม่สามารถปิดโต๊ะด้วยตนเองได้',
-                  style: TextStyle(fontSize: 12),
-                ),
+            if (table.isOccupied) ...[
+              const SizedBox(height: 12),
+
+              FilledButton.icon(
+                onPressed: () {
+                  _showSessionQR(context, ref);
+                },
+                icon: const Icon(Icons.qr_code),
+                label: const Text('ดู QR'),
               ),
+
+              const SizedBox(height: 8),
+
+              OutlinedButton.icon(
+                onPressed: () {
+                  _showMoveTableDialog(context, ref);
+                },
+                icon: const Icon(Icons.swap_horiz),
+                label: const Text('ย้ายโต๊ะ'),
+              ),
+            ],
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _showSessionQR(BuildContext context, WidgetRef ref) async {
+    try {
+      final repository = ref.read(diningTableRepositoryProvider);
+
+      final result = await repository.openSession(table.id);
+
+      final qrToken = result['qrToken']?.toString();
+
+      if (qrToken == null || qrToken.isEmpty) {
+        throw Exception('QR token not found');
+      }
+
+      if (!context.mounted) {
+        return;
+      }
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) =>
+              SessionQRPage(tableNo: table.tableNo, sessionToken: qrToken),
+        ),
+      );
+    } catch (error) {
+      if (!context.mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(_getErrorMessage(error))));
+    }
+  }
+
+  Future<void> _showMoveTableDialog(BuildContext context, WidgetRef ref) async {
+    final availableTables = allTables
+        .where((item) => item.id != table.id && item.status == 'AVAILABLE')
+        .toList();
+
+    if (availableTables.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('ไม่มีโต๊ะว่างสำหรับย้าย')));
+
+      return;
+    }
+
+    String? selectedTableId;
+
+    final targetTableId = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text('ย้ายโต๊ะ ${table.tableNo}'),
+              content: SizedBox(
+                width: 420,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('เลือกโต๊ะปลายทาง'),
+
+                    const SizedBox(height: 12),
+
+                    ...availableTables.map((targetTable) {
+                      return RadioListTile<String>(
+                        value: targetTable.id,
+                        groupValue: selectedTableId,
+                        onChanged: (value) {
+                          setState(() {
+                            selectedTableId = value;
+                          });
+                        },
+                        title: Text('โต๊ะ ${targetTable.tableNo}'),
+                        subtitle:
+                            targetTable.tableName != null &&
+                                targetTable.tableName!.isNotEmpty
+                            ? Text(targetTable.tableName!)
+                            : null,
+                      );
+                    }),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(dialogContext);
+                  },
+                  child: const Text('ยกเลิก'),
+                ),
+
+                FilledButton(
+                  onPressed: selectedTableId == null
+                      ? null
+                      : () {
+                          Navigator.pop(dialogContext, selectedTableId);
+                        },
+                  child: const Text('ถัดไป'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (targetTableId == null) {
+      return;
+    }
+
+    final targetTable = availableTables.firstWhere(
+      (item) => item.id == targetTableId,
+    );
+
+    if (!context.mounted) {
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('ยืนยันการย้ายโต๊ะ'),
+          content: Text(
+            'ย้ายลูกค้าจากโต๊ะ '
+            '${table.tableNo} '
+            'ไปโต๊ะ '
+            '${targetTable.tableNo} ?\n\n'
+            'ออเดอร์และ QR เดิมจะยังใช้งานต่อได้',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext, false);
+              },
+              child: const Text('ยกเลิก'),
+            ),
+
+            FilledButton(
+              onPressed: () {
+                Navigator.pop(dialogContext, true);
+              },
+              child: const Text('ยืนยันย้ายโต๊ะ'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true) {
+      return;
+    }
+
+    try {
+      final repository = ref.read(diningTableRepositoryProvider);
+
+      await repository.moveSession(
+        sourceTableId: table.id,
+        targetTableId: targetTableId,
+      );
+
+      ref.invalidate(diningTablesProvider(restaurantId));
+
+      if (!context.mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'ย้ายโต๊ะ '
+            '${table.tableNo} '
+            'ไป '
+            '${targetTable.tableNo} '
+            'เรียบร้อย',
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!context.mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(_getErrorMessage(error))));
+    }
   }
 
   Future<void> _openTable(BuildContext context, WidgetRef ref) async {
@@ -431,8 +614,12 @@ class _TableCard extends ConsumerWidget {
 
     try {
       final repository = ref.read(diningTableRepositoryProvider);
+      final result = await repository.openSession(table.id);
+      final qrToken = result['qrToken']?.toString();
 
-      await repository.openSession(table.id);
+      if (qrToken == null || qrToken.isEmpty) {
+        throw Exception('QR token not found');
+      }
 
       ref.invalidate(diningTablesProvider(restaurantId));
 
@@ -440,8 +627,12 @@ class _TableCard extends ConsumerWidget {
         return;
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('เปิดโต๊ะ ${table.tableNo} เรียบร้อย')),
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) =>
+              SessionQRPage(tableNo: table.tableNo, sessionToken: qrToken),
+        ),
       );
     } catch (error) {
       if (!context.mounted) {
