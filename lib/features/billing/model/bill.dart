@@ -55,13 +55,12 @@ class Bill {
   final String tableId;
   final String tableNo;
   final String sessionStatus;
-
   final List<BillItem> items;
   final List<BillDiscount> discounts;
-
   final int subtotalSatang;
   final int discountTotalSatang;
   final int totalSatang;
+  final String restaurantName;
 
   const Bill({
     required this.sessionId,
@@ -73,6 +72,7 @@ class Bill {
     required this.subtotalSatang,
     required this.discountTotalSatang,
     required this.totalSatang,
+    required this.restaurantName,
   });
 
   factory Bill.fromJson(Map<String, dynamic> json) {
@@ -95,10 +95,9 @@ class Bill {
           .toList(),
 
       subtotalSatang: json['subtotalSatang'] ?? 0,
-
       discountTotalSatang: json['discountTotalSatang'] ?? 0,
-
       totalSatang: json['totalSatang'] ?? 0,
+      restaurantName: json['restaurantName'] ?? '',
     );
   }
 }

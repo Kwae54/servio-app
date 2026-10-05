@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../model/bill.dart';
 import 'billing_provider.dart';
+import '../../../core/printing/thermal_print_service.dart';
 
 class BillPage extends ConsumerWidget {
   final String sessionId;
@@ -111,7 +112,6 @@ class _BillContent extends StatelessWidget {
 
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
-
                     children: [
                       Text('-${_formatPrice(discount.discountAmountSatang)}'),
 
@@ -135,7 +135,6 @@ class _BillContent extends StatelessWidget {
                               );
                             }
                           },
-
                           icon: const Icon(Icons.delete_outline),
                         ),
                     ],
@@ -180,10 +179,33 @@ class _BillContent extends StatelessWidget {
                 onPressed: () {
                   _showDiscountDialog(context, repository);
                 },
-
                 icon: const Icon(Icons.discount),
-
                 label: const Text('เพิ่มส่วนลด'),
+              ),
+
+              const SizedBox(height: 12),
+
+              OutlinedButton.icon(
+                onPressed: () async {
+                  try {
+                    await ThermalPrintService.printBill(bill: bill);
+                  } catch (error) {
+                    if (!context.mounted) {
+                      return;
+                    }
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'พิมพ์บิลไม่สำเร็จ: '
+                          '${error.toString()}',
+                        ),
+                      ),
+                    );
+                  }
+                },
+                icon: const Icon(Icons.print),
+                label: const Text('พิมพ์บิล'),
               ),
 
               const SizedBox(height: 12),
@@ -192,10 +214,11 @@ class _BillContent extends StatelessWidget {
                 onPressed: () {
                   _showPaymentDialog(context, repository);
                 },
-
                 icon: const Icon(Icons.payments),
-
-                label: Text('รับชำระ ${_formatPrice(bill.totalSatang)}'),
+                label: Text(
+                  'รับชำระ '
+                  '${_formatPrice(bill.totalSatang)}',
+                ),
               ),
             ],
           ],

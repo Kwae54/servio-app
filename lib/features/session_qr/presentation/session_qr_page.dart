@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
+import '../../../core/printing/thermal_print_service.dart';
+
 class SessionQRPage extends StatelessWidget {
+  final String restaurantName;
   final String tableNo;
   final String sessionToken;
 
   const SessionQRPage({
     super.key,
+    required this.restaurantName,
     required this.tableNo,
     required this.sessionToken,
   });
@@ -49,6 +53,20 @@ class SessionQRPage extends StatelessWidget {
               const SizedBox(height: 24),
 
               SelectableText(orderUrl, textAlign: TextAlign.center),
+
+              const SizedBox(height: 16),
+
+              FilledButton.icon(
+                onPressed: () async {
+                  await ThermalPrintService.printSessionQR(
+                    restaurantName: restaurantName,
+                    tableNo: tableNo,
+                    orderUrl: orderUrl,
+                  );
+                },
+                icon: const Icon(Icons.print),
+                label: const Text('พิมพ์ QR'),
+              ),
             ],
           ),
         ),

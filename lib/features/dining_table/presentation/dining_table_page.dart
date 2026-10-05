@@ -76,6 +76,7 @@ class DiningTablePage extends ConsumerWidget {
                       return _TableCard(
                         table: tables[index],
                         restaurantId: restaurantId,
+                        restaurantName: restaurantName,
                         allTables: tables,
                       );
                     },
@@ -93,6 +94,7 @@ class DiningTablePage extends ConsumerWidget {
                     return _TableCard(
                       table: tables[index],
                       restaurantId: restaurantId,
+                      restaurantName: restaurantName,
                       allTables: tables,
                     );
                   },
@@ -234,11 +236,13 @@ class DiningTablePage extends ConsumerWidget {
 class _TableCard extends ConsumerWidget {
   final DiningTable table;
   final String restaurantId;
+  final String restaurantName;
   final List<DiningTable> allTables;
 
   const _TableCard({
     required this.table,
     required this.restaurantId,
+    required this.restaurantName,
     required this.allTables,
   });
 
@@ -406,8 +410,11 @@ class _TableCard extends ConsumerWidget {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) =>
-              SessionQRPage(tableNo: table.tableNo, sessionToken: qrToken),
+          builder: (_) => SessionQRPage(
+            restaurantName: restaurantName,
+            tableNo: table.tableNo,
+            sessionToken: qrToken,
+          ),
         ),
       );
     } catch (error) {
@@ -630,8 +637,11 @@ class _TableCard extends ConsumerWidget {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) =>
-              SessionQRPage(tableNo: table.tableNo, sessionToken: qrToken),
+          builder: (_) => SessionQRPage(
+            restaurantName: restaurantName,
+            tableNo: table.tableNo,
+            sessionToken: qrToken,
+          ),
         ),
       );
     } catch (error) {
